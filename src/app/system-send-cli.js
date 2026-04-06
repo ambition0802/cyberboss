@@ -2,6 +2,7 @@ const crypto = require("crypto");
 const fs = require("fs");
 
 const { resolveSelectedAccount } = require("../adapters/channel/weixin/account-store");
+const { loadPersistedContextTokens } = require("../adapters/channel/weixin/context-token-store");
 const { SystemMessageQueueStore } = require("../core/system-message-queue-store");
 
 async function runSystemSendCommand(config) {
@@ -30,6 +31,10 @@ async function runSystemSendCommand(config) {
   }
 
   const account = resolveSelectedAccount(config);
+  const contextTokens = loadPersistedContextTokens(config, account.accountId);
+  if (!contextTokens[senderId]) {
+    throw new Error(`找不到用户 ${senderId} 的 context token，先让这个用户和 bot 聊过一次`);
+  }
   const queue = new SystemMessageQueueStore({ filePath: config.systemMessageQueueFile });
   const queued = queue.enqueue({
     id: crypto.randomUUID(),
