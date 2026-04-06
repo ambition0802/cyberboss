@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 
 const { resolveSelectedAccount } = require("../adapters/channel/weixin/account-store");
+const { SessionStore } = require("../adapters/runtime/codex/session-store");
 const { SystemMessageQueueStore } = require("../core/system-message-queue-store");
 
 const DEFAULT_MIN_INTERVAL_MS = 3 * 60_000;
@@ -10,7 +11,8 @@ const INTERNAL_CHECKIN_TRIGGER = "判断是否要介入 Wendy。可沉默、发�
 async function runSystemCheckinPoller(config) {
   const account = resolveSelectedAccount(config);
   const queue = new SystemMessageQueueStore({ filePath: config.systemMessageQueueFile });
-  const target = resolvePollerTarget({ config });
+  const sessionStore = new SessionStore({ filePath: config.sessionsFile });
+  const target = resolvePollerTarget({ config, account, sessionStore });
   const minIntervalMs = readIntervalMs(process.env.CYBERBOSS_CHECKIN_MIN_INTERVAL_MS, DEFAULT_MIN_INTERVAL_MS);
   const maxIntervalMs = Math.max(
     minIntervalMs,
@@ -43,9 +45,9 @@ async function runSystemCheckinPoller(config) {
   }
 }
 
-function resolvePollerTarget({ config }) {
+function resolvePollerTarget({ config, account, sessionStore }) {
   const senderId = resolveSenderId(config);
-  const workspaceRoot = resolveWorkspaceRoot(config);
+  const workspaceRoot = resolveWorkspaceRoot(config, account, sessionStore, senderId);
 
   if (!senderId) {
     throw new Error("无法确定 checkin poller 的微信用户，先配置 CYBERBOSS_ALLOWED_USER_IDS");
@@ -68,11 +70,22 @@ function resolveSenderId(config) {
   return "";
 }
 
-function resolveWorkspaceRoot(config) {
+function resolveWorkspaceRoot(config, account, sessionStore, senderId) {
   const explicit = normalizeText(process.env.CYBERBOSS_CHECKIN_WORKSPACE);
   if (explicit) {
     return explicit;
   }
+
+  const bindingKey = sessionStore.buildBindingKey({
+    workspaceId: config.workspaceId,
+    accountId: account.accountId,
+    senderId,
+  });
+  const activeWorkspaceRoot = normalizeText(sessionStore.getActiveWorkspaceRoot(bindingKey));
+  if (activeWorkspaceRoot) {
+    return activeWorkspaceRoot;
+  }
+
   return normalizeText(config.workspaceRoot);
 }
 
