@@ -61,11 +61,11 @@ export CYBERBOSS_WEIXIN_ADAPTER=legacy
 ```bash
 npm install
 npm run check
-node ./bin/cyberboss.js login
-node ./bin/cyberboss.js accounts
-node ./bin/cyberboss.js start
-node ./bin/cyberboss.js doctor
-node ./bin/cyberboss.js help
+npm run login
+npm run accounts
+npm run start
+npm run doctor
+npm run help
 ```
 
 目前终端只把启动和诊断平铺在顶层，不把提醒、日记、时间轴继续堆成一排顶层命令。
@@ -73,13 +73,13 @@ node ./bin/cyberboss.js help
 后续能力会下沉成子命令，例如：
 
 ```bash
-cyberboss timeline write
-cyberboss timeline build
-cyberboss reminder write
-cyberboss diary write
+npm run reminder:write -- --delay 30m --text "提醒内容"
+npm run diary:write -- --title 标题 --text "内容"
+npm run system:send -- --text "系统消息"
+npm run system:checkin
 ```
 
-当前这些子命令入口已经预留，但执行能力还在后续接入。
+目前已接入 `reminder`、`diary`、`system` 这三组脚本；`timeline` 仍在后续接入。
 
 ### 3. 当前已接入的微信命令
 

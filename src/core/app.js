@@ -740,5 +740,12 @@ function matchesCommandPrefix(commandTokens, allowlist) {
 
 function buildReminderSystemTrigger(reminder) {
   const reminderText = String(reminder?.text || "").trim();
-  return `这条 reminder 已到期。\n内容：${reminderText}`;
+  if (!reminderText) {
+    return "这是一条内部 reminder 到期触发。不是用户刚刚发来的新消息，也不要再创建新的 reminder。";
+  }
+  return [
+    "这是一条内部 reminder 到期触发。",
+    "不是用户刚刚发来的新消息，也不要再创建新的 reminder。",
+    `原提醒内容：${reminderText}`,
+  ].join("\n");
 }

@@ -210,7 +210,7 @@ function listCommandGroups() {
 
 function buildTerminalHelpText() {
   const lines = [
-    "用法: cyberboss <命令>",
+    "用法: npm run <script>",
     "",
     "当前终端命令：",
   ];
@@ -222,7 +222,7 @@ function buildTerminalHelpText() {
     }
     lines.push(`- ${group.label}`);
     for (const action of activeActions) {
-      lines.push(`  ${action.terminal.join(", ")}  ${action.summary}`);
+      lines.push(`  ${formatTerminalExamples(action)}  ${action.summary}`);
     }
   }
 
@@ -271,14 +271,14 @@ function buildTerminalTopicHelp(topic) {
 
   const hasPlannedOnly = actions.every((action) => action.status === "planned");
   const lines = [
-    `用法: cyberboss ${normalizedTopic} <子命令>`,
+    `用法: ${buildTopicUsage(normalizedTopic)}`,
     "",
     hasPlannedOnly
       ? `当前 ${normalizedTopic} 命令仍在接入中，计划中的子命令：`
       : `当前 ${normalizedTopic} 命令：`,
   ];
   for (const action of actions) {
-    lines.push(`- ${action.terminal.join(", ")}  ${action.summary}`);
+    lines.push(`- ${formatTerminalExamples(action)}  ${action.summary}`);
   }
   return lines.join("\n");
 }
@@ -316,3 +316,53 @@ module.exports = {
   isPlannedTerminalTopic,
   listCommandGroups,
 };
+
+function formatTerminalExamples(action) {
+  const terminal = Array.isArray(action?.terminal) ? action.terminal : [];
+  if (!terminal.length) {
+    return "";
+  }
+  return terminal.map((commandText) => toNpmRunExample(commandText)).join(", ");
+}
+
+function buildTopicUsage(topic) {
+  switch (topic) {
+    case "reminder":
+      return "npm run reminder:write -- <args>";
+    case "diary":
+      return "npm run diary:write -- <args>";
+    case "system":
+      return "npm run system:send -- <args> / npm run system:checkin";
+    case "timeline":
+      return "timeline 脚本接入中";
+    default:
+      return "npm run <script>";
+  }
+}
+
+function toNpmRunExample(commandText) {
+  const normalized = typeof commandText === "string" ? commandText.trim() : "";
+  switch (normalized) {
+    case "login":
+    case "accounts":
+    case "start":
+    case "doctor":
+    case "help":
+      return `npm run ${normalized}`;
+    case "reminder write":
+      return "npm run reminder:write -- <args>";
+    case "diary write":
+      return "npm run diary:write -- <args>";
+    case "system send":
+      return "npm run system:send -- <args>";
+    case "system checkin-poller":
+      return "npm run system:checkin";
+    case "timeline write":
+    case "timeline build":
+    case "timeline serve":
+    case "timeline screenshot":
+      return normalized;
+    default:
+      return normalized;
+  }
+}

@@ -92,10 +92,10 @@ function parseSystemSendArgs(args) {
 
 function printSystemSendHelp() {
   console.log(`
-用法: cyberboss system send --text "<message>" [--user <wechat_user_id>] [--workspace /绝对路径]
+用法: npm run system:send -- --text "<message>" [--user <wechat_user_id>] [--workspace /绝对路径]
 
 示例:
-  cyberboss system send --text "提醒她今天早点睡" --workspace "$(pwd)"
+  npm run system:send -- --text "提醒她今天早点睡" --workspace "$(pwd)"
 `);
 }
 

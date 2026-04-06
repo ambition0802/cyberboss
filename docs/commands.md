@@ -49,32 +49,34 @@
 
 当前只开放最小一组：
 
-- `cyberboss login`
-- `cyberboss accounts`
-- `cyberboss start`
-- `cyberboss doctor`
-- `cyberboss help`
+- `npm run login`
+- `npm run accounts`
+- `npm run start`
+- `npm run doctor`
+- `npm run help`
 
 ## 规划中的终端子命令
 
 为了避免继续把所有能力都平铺在顶层，后续命令会按能力分组：
 
-### timeline
-
-- `cyberboss timeline write`
-- `cyberboss timeline build`
-- `cyberboss timeline serve`
-- `cyberboss timeline screenshot`
-
 ### reminder
 
-- `cyberboss reminder write`
+- `npm run reminder:write -- --delay 30m --text "提醒内容"`
 
 ### diary
 
-- `cyberboss diary write`
+- `npm run diary:write -- --title 标题 --text "内容"`
 
-当前这些子命令只预留命名和帮助，不代表功能已经完全接入。
+### system
+
+- `npm run system:send -- --text "系统消息"`
+- `npm run system:checkin`
+
+### timeline
+
+- `timeline` 相关脚本仍在接入中，暂不作为当前默认命令面展示。
+
+当前文档里列出的 `reminder / diary / system` 已可直接使用；`timeline` 仍是后续能力。
 
 ## 当前已接入的微信命令
 

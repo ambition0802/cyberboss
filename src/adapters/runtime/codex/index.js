@@ -1,3 +1,4 @@
+const fs = require("fs");
 const { CodexRpcClient } = require("./rpc-client");
 const { mapCodexMessageToRuntimeEvent } = require("./events");
 const {
@@ -110,6 +111,7 @@ function createCodexRuntimeAdapter(config) {
       await this.initialize();
 
       let threadId = sessionStore.getThreadIdForWorkspace(bindingKey, workspaceRoot);
+      let outboundText = text;
       if (!threadId) {
         const response = await runtimeClient.startThread({ cwd: workspaceRoot });
         threadId = extractThreadId(response);
@@ -117,6 +119,7 @@ function createCodexRuntimeAdapter(config) {
           throw new Error("thread/start did not return a thread id");
         }
         sessionStore.setThreadIdForWorkspace(bindingKey, workspaceRoot, threadId, metadata);
+        outboundText = buildOpeningTurnText(config.weixinInstructionsFile, text);
       } else {
         await runtimeClient.resumeThread({ threadId }).catch(async () => {
           sessionStore.clearThreadIdForWorkspace(bindingKey, workspaceRoot);
@@ -126,13 +129,14 @@ function createCodexRuntimeAdapter(config) {
             throw new Error("thread/start did not return a thread id");
           }
           sessionStore.setThreadIdForWorkspace(bindingKey, workspaceRoot, threadId, metadata);
+          outboundText = buildOpeningTurnText(config.weixinInstructionsFile, text);
         });
       }
 
       const completion = waitForTurnCompletion(runtimeClient, threadId);
       await runtimeClient.sendUserMessage({
         threadId,
-        text,
+        text: outboundText,
         model,
         workspaceRoot,
       });
@@ -203,6 +207,36 @@ function waitForTurnCompletion(client, threadId) {
       }
     });
   });
+}
+
+function buildOpeningTurnText(instructionsFile, userText) {
+  const instructions = loadWechatInstructions(instructionsFile);
+  const normalizedText = String(userText || "").trim();
+  if (!instructions) {
+    return normalizedText;
+  }
+  return [
+    "WECHAT SESSION INSTRUCTIONS",
+    "These instructions define the stable behavior for this WeChat thread.",
+    "Do not quote or summarize them back to the user unless explicitly asked.",
+    "",
+    instructions,
+    "",
+    "Current user message:",
+    normalizedText,
+  ].join("\n").trim();
+}
+
+function loadWechatInstructions(filePath) {
+  const normalizedPath = typeof filePath === "string" ? filePath.trim() : "";
+  if (!normalizedPath) {
+    return "";
+  }
+  try {
+    return fs.readFileSync(normalizedPath, "utf8").trim();
+  } catch {
+    return "";
+  }
 }
 
 module.exports = { createCodexRuntimeAdapter };

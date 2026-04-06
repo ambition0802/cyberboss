@@ -100,7 +100,7 @@ function createWeixinChannelAdapter(config) {
     printAccounts() {
       const accounts = listWeixinAccounts(config);
       if (!accounts.length) {
-        console.log("当前没有已保存的微信账号。先执行 `cyberboss login`。");
+        console.log("当前没有已保存的微信账号。先执行 `npm run login`。");
         return;
       }
       console.log("已保存账号：");

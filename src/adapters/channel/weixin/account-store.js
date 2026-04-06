@@ -104,7 +104,7 @@ function resolveSelectedAccount(config) {
   }
   const accounts = listWeixinAccounts(config);
   if (!accounts.length) {
-    throw new Error("当前没有已保存的微信账号，请先执行 `cyberboss login`");
+    throw new Error("当前没有已保存的微信账号，请先执行 `npm run login`");
   }
   if (accounts.length > 1) {
     const accountIds = accounts.map((account) => account.accountId).join(", ");
@@ -125,4 +125,3 @@ module.exports = {
   resolveSelectedAccount,
   saveWeixinAccount,
 };
-
