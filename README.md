@@ -74,3 +74,10 @@ docs/
 - 已保存账号列表
 - context token 本地持久化
 - 微信 HTTP API 基础访问封装
+
+## 当前已接入的 Codex runtime 底层能力
+
+- Codex app-server / websocket RPC client
+- session store
+- model catalog 规范化
+- runtime adapter 骨架

@@ -16,6 +16,9 @@ function readConfig() {
     weixinCdnBaseUrl: readTextEnv("CYBERBOSS_WEIXIN_CDN_BASE_URL") || "https://novac2c.cdn.weixin.qq.com/c2c",
     weixinQrBotType: readTextEnv("CYBERBOSS_WEIXIN_QR_BOT_TYPE") || "3",
     accountsDir: path.join(stateDir, "accounts"),
+    codexEndpoint: readTextEnv("CYBERBOSS_CODEX_ENDPOINT"),
+    codexCommand: readTextEnv("CYBERBOSS_CODEX_COMMAND"),
+    sessionsFile: path.join(stateDir, "sessions.json"),
   };
 }
 
