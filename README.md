@@ -128,6 +128,9 @@ npm run timeline:screenshot
 
 - `CYBERBOSS_STATE_DIR`
   - 默认：`${HOME}/.cyberboss`
+- `CYBERBOSS_USER_NAME`
+  - 默认：`Wendy`
+  - 用来替换默认文案、check-in 触发和本地 instructions 里的用户名
 - `CYBERBOSS_CHANNEL`
   - 默认：`weixin`
 - `CYBERBOSS_RUNTIME`
@@ -138,6 +141,14 @@ npm run timeline:screenshot
   - 默认：`https://ilinkai.weixin.qq.com`
 - `CYBERBOSS_ACCOUNT_ID`
   - 多账号时指定当前使用的微信 bot 账号
+
+如果你不想在本地 instructions 和默认触发文案里继续用 `Wendy`，可以先设置：
+
+```bash
+export CYBERBOSS_USER_NAME="你的名字"
+```
+
+后续再把 `~/.cyberboss/weixin-instructions.md` 里对应的人名一起替换掉。
 
 ## 结构
 

@@ -6,7 +6,6 @@ const { SystemMessageQueueStore } = require("../core/system-message-queue-store"
 
 const DEFAULT_MIN_INTERVAL_MS = 3 * 60_000;
 const DEFAULT_MAX_INTERVAL_MS = 60 * 60_000;
-const INTERNAL_CHECKIN_TRIGGER = "判断是否要介入 Wendy。可沉默、发短微信、写日记、写入时间轴、调用米家MCP或用工具。没必要就 __SILENT__；若发微信，只输出那句。";
 
 async function runSystemCheckinPoller(config) {
   const account = resolveSelectedAccount(config);
@@ -38,7 +37,7 @@ async function runSystemCheckinPoller(config) {
       accountId: account.accountId,
       senderId: target.senderId,
       workspaceRoot: target.workspaceRoot,
-      text: INTERNAL_CHECKIN_TRIGGER,
+      text: buildCheckinTrigger(config),
       createdAt: new Date().toISOString(),
     });
     console.log(`[cyberboss] checkin queued id=${queued.id}`);
@@ -107,6 +106,11 @@ function normalizeText(value) {
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function buildCheckinTrigger(config) {
+  const userName = normalizeText(config?.userName) || "Wendy";
+  return `判断是否要介入 ${userName}。可沉默、发短微信、写日记、写入时间轴、调用米家MCP或用工具。没必要就 __SILENT__；若发微信，只输出那句。`;
 }
 
 module.exports = { runSystemCheckinPoller };
