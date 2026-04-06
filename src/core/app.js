@@ -1,6 +1,7 @@
 const { createWeixinChannelAdapter } = require("../adapters/channel/weixin");
 const { createCodexRuntimeAdapter } = require("../adapters/runtime/codex");
 const { createTimelineIntegration } = require("../integrations/timeline");
+const { ThreadStateStore } = require("./thread-state-store");
 
 class CyberbossApp {
   constructor(config) {
@@ -8,6 +9,10 @@ class CyberbossApp {
     this.channelAdapter = createWeixinChannelAdapter(config);
     this.runtimeAdapter = createCodexRuntimeAdapter(config);
     this.timelineIntegration = createTimelineIntegration(config);
+    this.threadStateStore = new ThreadStateStore();
+    this.runtimeAdapter.onEvent((event) => {
+      this.threadStateStore.applyRuntimeEvent(event);
+    });
   }
 
   printDoctor() {
@@ -16,6 +21,7 @@ class CyberbossApp {
       channel: this.channelAdapter.describe(),
       runtime: this.runtimeAdapter.describe(),
       timeline: this.timelineIntegration.describe(),
+      threads: this.threadStateStore.snapshot(),
     }, null, 2));
   }
 
