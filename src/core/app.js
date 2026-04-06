@@ -1,5 +1,4 @@
 const fs = require("fs");
-const path = require("path");
 const { createWeixinChannelAdapter } = require("../adapters/channel/weixin");
 const { createCodexRuntimeAdapter } = require("../adapters/runtime/codex");
 const { findModelByQuery } = require("../adapters/runtime/codex/model-catalog");
@@ -170,9 +169,6 @@ class CyberbossApp {
         return;
       case "model":
         await this.handleModelCommand(normalized, command);
-        return;
-      case "send":
-        await this.handleSendCommand(normalized, command);
         return;
       case "help":
         await this.handleHelpCommand(normalized);
@@ -422,65 +418,6 @@ class CyberbossApp {
     await this.channelAdapter.sendText({
       userId: normalized.senderId,
       text: `已切换模型。\n\nworkspace: ${workspaceRoot}\nmodel: ${matched.model}`,
-      contextToken: normalized.contextToken,
-    });
-  }
-
-  async handleSendCommand(normalized, command) {
-    const requestedPath = normalizeCommandArgument(command.args);
-    if (!requestedPath) {
-      await this.channelAdapter.sendText({
-        userId: normalized.senderId,
-        text: "用法：/send <相对路径>",
-        contextToken: normalized.contextToken,
-      });
-      return;
-    }
-
-    if (path.isAbsolute(requestedPath)) {
-      await this.channelAdapter.sendText({
-        userId: normalized.senderId,
-        text: "只支持发送当前项目内的相对路径文件。",
-        contextToken: normalized.contextToken,
-      });
-      return;
-    }
-
-    const bindingKey = this.runtimeAdapter.getSessionStore().buildBindingKey({
-      workspaceId: normalized.workspaceId,
-      accountId: normalized.accountId,
-      senderId: normalized.senderId,
-    });
-    const workspaceRoot = this.resolveWorkspaceRoot(bindingKey);
-    const resolvedPath = path.resolve(workspaceRoot, requestedPath);
-    const relativePath = path.relative(workspaceRoot, resolvedPath);
-    if (!relativePath || relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
-      await this.channelAdapter.sendText({
-        userId: normalized.senderId,
-        text: "只支持发送当前项目内的文件。",
-        contextToken: normalized.contextToken,
-      });
-      return;
-    }
-
-    const stats = await fs.promises.stat(resolvedPath).catch(() => null);
-    if (!stats?.isFile()) {
-      await this.channelAdapter.sendText({
-        userId: normalized.senderId,
-        text: `文件不存在：${requestedPath}`,
-        contextToken: normalized.contextToken,
-      });
-      return;
-    }
-
-    await this.channelAdapter.sendFile({
-      userId: normalized.senderId,
-      filePath: resolvedPath,
-      contextToken: normalized.contextToken,
-    });
-    await this.channelAdapter.sendText({
-      userId: normalized.senderId,
-      text: `已发送文件：${requestedPath}`,
       contextToken: normalized.contextToken,
     });
   }

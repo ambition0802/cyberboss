@@ -95,7 +95,6 @@ cyberboss diary write
 - `/no` -> `approval.reject_once`
 - `/model` -> `model.inspect`
 - `/model <id>` -> `model.select`
-- `/send <path>` -> `channel.send_file`
 - `/help` -> `app.help`
 
 其中：
@@ -103,6 +102,7 @@ cyberboss diary write
 - `/status` 会合并原先 `where` 和 `usage` 的职责
 - `/help` 保留
 - `/reread` 暂不保留，优先交给自然语言触发
+- 发文件回聊天保留为内部能力，不再暴露成微信命令
 
 ### 5. 为什么要分层
 

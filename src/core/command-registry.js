@@ -121,9 +121,9 @@ const COMMAND_GROUPS = [
       },
       {
         action: "channel.send_file",
-        summary: "将工作区文件发送回当前聊天",
+        summary: "将文件作为附件发送回当前聊天",
         terminal: [],
-        weixin: ["/send <path>"],
+        weixin: [],
         status: "active",
       },
       {
