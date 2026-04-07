@@ -23,6 +23,7 @@ const SESSION_EXPIRED_ERRCODE = -14;
 const RETRY_DELAY_MS = 2_000;
 const BACKOFF_DELAY_MS = 30_000;
 const MAX_CONSECUTIVE_FAILURES = 3;
+const FIRST_RUNTIME_EVENT_TIMEOUT_MS = 8_000;
 
 class CyberbossApp {
   constructor(config) {
@@ -39,8 +40,10 @@ class CyberbossApp {
       channelAdapter: this.channelAdapter,
       sessionStore: this.runtimeAdapter.getSessionStore(),
     });
+    this.pendingRuntimeEventWatchdogs = new Map();
     this.runtimeEventChain = Promise.resolve();
     this.runtimeAdapter.onEvent((event) => {
+      this.clearRuntimeEventWatchdog(event?.payload?.threadId);
       this.threadStateStore.applyRuntimeEvent(event);
       this.runtimeEventChain = this.runtimeEventChain
         .catch(() => {})
@@ -288,6 +291,11 @@ class CyberbossApp {
           senderId: prepared.senderId,
         },
       });
+      this.scheduleRuntimeEventWatchdog({
+        bindingKey,
+        workspaceRoot,
+        normalized: prepared,
+      });
     } catch (error) {
       const messageText = error instanceof Error ? error.message : String(error || "unknown error");
       await this.channelAdapter.sendText({
@@ -296,6 +304,60 @@ class CyberbossApp {
         contextToken: normalized.contextToken,
       }).catch(() => {});
     }
+  }
+
+  scheduleRuntimeEventWatchdog({ bindingKey, workspaceRoot, normalized }) {
+    const sessionStore = this.runtimeAdapter.getSessionStore();
+    const threadId = sessionStore.getThreadIdForWorkspace(bindingKey, workspaceRoot);
+    const normalizedThreadId = normalizeCommandArgument(threadId);
+    if (!normalizedThreadId) {
+      return;
+    }
+
+    this.clearRuntimeEventWatchdog(normalizedThreadId);
+    const timer = setTimeout(async () => {
+      this.pendingRuntimeEventWatchdogs.delete(normalizedThreadId);
+      const currentThreadState = this.threadStateStore.getThreadState(normalizedThreadId);
+      if (currentThreadState?.status === "running" || currentThreadState?.turnId) {
+        return;
+      }
+      await this.channelAdapter.sendTyping({
+        userId: normalized.senderId,
+        status: 0,
+        contextToken: normalized.contextToken,
+      }).catch(() => {});
+      await this.channelAdapter.sendText({
+        userId: normalized.senderId,
+        contextToken: normalized.contextToken,
+        preserveBlock: true,
+        text: [
+          "这条消息已经发到 bridge，但 Codex runtime 没有返回首个事件。",
+          "这通常不是微信没连上，而是共享线程链路没有真正跑通。",
+          `workspace: ${workspaceRoot}`,
+          `thread: ${normalizedThreadId}`,
+          "优先检查：共享 app-server 是否正常、当前终端是否接在同一个 thread、runtime 是否真的开始处理这条消息。",
+          "如果你正在帮用户排查，直接按这套顺序做：",
+          "1. 在项目目录执行 ./scripts/show_shared_status.sh",
+          "2. 如果 bridge 不在，先执行 ./scripts/start_shared_wechat.sh",
+          "3. 再开一个终端执行 ./scripts/open_wechat_thread.sh",
+          "4. 确认 terminal 里打开的是上面这条 thread，而不是另一条私有线程",
+        ].join("\n"),
+      }).catch(() => {});
+    }, FIRST_RUNTIME_EVENT_TIMEOUT_MS);
+    this.pendingRuntimeEventWatchdogs.set(normalizedThreadId, timer);
+  }
+
+  clearRuntimeEventWatchdog(threadId) {
+    const normalizedThreadId = normalizeCommandArgument(threadId);
+    if (!normalizedThreadId) {
+      return;
+    }
+    const timer = this.pendingRuntimeEventWatchdogs.get(normalizedThreadId);
+    if (!timer) {
+      return;
+    }
+    clearTimeout(timer);
+    this.pendingRuntimeEventWatchdogs.delete(normalizedThreadId);
   }
 
   async prepareIncomingMessageForRuntime(normalized, workspaceRoot) {
@@ -1020,12 +1082,62 @@ function normalizeCommandName(value) {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
 }
 
+const WINDOWS_DRIVE_PATH_RE = /^[A-Za-z]:\//;
+const WINDOWS_DRIVE_ROOT_RE = /^[A-Za-z]:\/$/;
+const WINDOWS_UNC_PREFIX_RE = /^\/\/\?\//;
+
 function normalizeWorkspacePath(value) {
-  return typeof value === "string" ? value.trim() : "";
+  const normalized = String(value || "").trim();
+  if (!normalized) {
+    return "";
+  }
+
+  const fromFileUri = extractPathFromFileUri(normalized);
+  const rawPath = fromFileUri || normalized;
+  const withForwardSlashes = rawPath.replace(/\\/g, "/").replace(WINDOWS_UNC_PREFIX_RE, "");
+  const normalizedDrivePrefix = /^\/[A-Za-z]:\//.test(withForwardSlashes)
+    ? withForwardSlashes.slice(1)
+    : withForwardSlashes;
+
+  if (WINDOWS_DRIVE_ROOT_RE.test(normalizedDrivePrefix)) {
+    return normalizedDrivePrefix;
+  }
+  if (WINDOWS_DRIVE_PATH_RE.test(normalizedDrivePrefix)) {
+    return normalizedDrivePrefix.replace(/\/+$/g, "");
+  }
+  return normalizedDrivePrefix.replace(/\/+$/g, "");
 }
 
 function isAbsoluteWorkspacePath(value) {
-  return typeof value === "string" && value.startsWith("/");
+  const normalized = normalizeWorkspacePath(value);
+  if (!normalized) {
+    return false;
+  }
+  if (WINDOWS_DRIVE_PATH_RE.test(normalized)) {
+    return true;
+  }
+  return path.posix.isAbsolute(normalized);
+}
+
+function extractPathFromFileUri(value) {
+  const input = String(value || "").trim();
+  if (!/^file:\/\//i.test(input)) {
+    return "";
+  }
+
+  try {
+    const parsed = new URL(input);
+    if (parsed.protocol !== "file:") {
+      return "";
+    }
+    const pathname = decodeURIComponent(parsed.pathname || "");
+    const withHost = parsed.host && parsed.host !== "localhost"
+      ? `//${parsed.host}${pathname}`
+      : pathname;
+    return withHost;
+  } catch {
+    return "";
+  }
 }
 
 function normalizeCommandArgument(value) {
