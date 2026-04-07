@@ -6,6 +6,7 @@
 > “你尽管在多巴胺里逃避，但我永远会在下一个时间戳抓到你。”
 
 [![Node >=22](https://img.shields.io/badge/Node-22%2B-3C873A)](./package.json)
+[![License: AGPLv3](https://img.shields.io/badge/License-AGPLv3-b31b1b)](./LICENSE)
 [![Runtime-Codex](https://img.shields.io/badge/Runtime-Codex-111827)](#technical-stack)
 [![Bridge-Weixin](https://img.shields.io/badge/Bridge-Weixin-07C160)](#technical-stack)
 [![Timeline-Enabled](https://img.shields.io/badge/Timeline-Enabled-8b5cf6)](#core-features)
@@ -318,3 +319,11 @@ ${HOME}/.cyberboss
 ### 为什么不建议一开始就大改 instructions？
 
 如果你想要更强的“赛博老板”效果，最好先让 agent 在真实对话里自己长出节奏，再回头修正明显不对的部分。过早手工写死行为，通常会让它更像脚本，不像真的在盯你。
+
+## License
+
+本项目主要面向个人本地部署场景设计。由于它会长期处理微信消息、线程上下文、提醒、生活轨迹和其他高度私密的个人信息，我不希望它被闭源包装成云服务后，再反向剥夺用户对代码和数据流向的知情权。
+
+因此，本项目采用 `AGPL-3.0-only` 协议发布。任何基于本项目进行修改、扩展并通过网络向用户提供服务的行为，都必须按照 AGPL 的要求向对应用户提供完整的对应源代码。
+
+商业使用并非天然被禁止，但前提是必须完整遵守 AGPL。对于任何形式的闭源封装、闭源 SaaS 化或只提供服务不提供源码的做法，本项目都明确不欢迎。
