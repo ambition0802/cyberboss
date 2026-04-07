@@ -30,7 +30,7 @@ class SystemMessageDispatcher {
       threadKey: `system:${message.senderId}`,
       senderId: message.senderId,
       messageId: message.id,
-      text: buildSystemInboundText(message?.text),
+      text: buildSystemInboundText(message?.text, this.config),
       attachments: [],
       command: "message",
       contextToken,
@@ -40,12 +40,13 @@ class SystemMessageDispatcher {
   }
 }
 
-function buildSystemInboundText(text) {
+function buildSystemInboundText(text, config = {}) {
   const body = normalizeText(text);
+  const userName = normalizeText(config?.userName) || "用户";
   if (!body) {
-    return "内部触发。\n此条信息对用户不可见。";
+    return `内部触发。\n此条信息对${userName}不可见。`;
   }
-  return `内部触发。\n此条信息对用户不可见。\n${body}`;
+  return `内部触发。\n此条信息对${userName}不可见。\n${body}`;
 }
 
 function normalizeIsoTime(value) {

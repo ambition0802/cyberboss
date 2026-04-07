@@ -365,7 +365,7 @@ class CyberbossApp {
           accountId: reminder.accountId,
           senderId: reminder.senderId,
           workspaceRoot: this.resolveReminderWorkspaceRoot(reminder),
-          text: buildReminderSystemTrigger(reminder),
+          text: buildReminderSystemTrigger(reminder, this.config),
           createdAt: new Date().toISOString(),
         });
       } catch {
@@ -1159,11 +1159,12 @@ function buildApprovalPromptSignature(approval) {
   });
 }
 
-function buildReminderSystemTrigger(reminder) {
+function buildReminderSystemTrigger(reminder, config = {}) {
   const reminderText = String(reminder?.text || "").trim();
+  const userName = String(config?.userName || "").trim() || "用户";
   return [
     "提醒到点了。",
-    "发一条自然简短的微信提醒。",
+    `给${userName}发一条自然简短的微信提醒。`,
     "别提内部触发，别机械复述原文。",
     `内容：${reminderText}`,
   ].join("\n");

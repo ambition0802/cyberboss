@@ -44,6 +44,47 @@ function ensureRuntimeEnv() {
   }
 }
 
+function ensureBootstrapFiles(config) {
+  ensureInstructionsTemplate(config);
+}
+
+function ensureInstructionsTemplate(config) {
+  const filePath = typeof config?.weixinInstructionsFile === "string"
+    ? config.weixinInstructionsFile.trim()
+    : "";
+  if (!filePath || fs.existsSync(filePath)) {
+    return;
+  }
+
+  const templatePath = path.resolve(__dirname, "..", "templates", "weixin-instructions.md");
+  let template = "";
+  try {
+    template = fs.readFileSync(templatePath, "utf8");
+  } catch {
+    return;
+  }
+
+  const userName = String(config?.userName || "").trim() || "用户";
+  const pronoun = resolveUserPronoun(config?.userGender);
+  const content = template
+    .replaceAll("{{USER_NAME}}", userName)
+    .replaceAll("她", pronoun)
+    .trimEnd() + "\n";
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, content, "utf8");
+}
+
+function resolveUserPronoun(gender) {
+  const normalized = String(gender || "").trim().toLowerCase();
+  if (normalized === "male" || normalized === "man" || normalized === "m" || normalized === "男") {
+    return "他";
+  }
+  if (normalized === "neutral" || normalized === "nonbinary" || normalized === "nb" || normalized === "ta") {
+    return "TA";
+  }
+  return "她";
+}
+
 function printHelp() {
   console.log(buildTerminalHelpText());
 }
@@ -74,6 +115,7 @@ async function main() {
   installRuntimeErrorHooks();
   const argv = process.argv.slice(2);
   const config = readConfig();
+  ensureBootstrapFiles(config);
   const command = config.mode || "help";
   const subcommand = argv[1] || "";
   let app = null;

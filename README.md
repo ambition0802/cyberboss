@@ -1,243 +1,320 @@
-# Cyberboss
+<div align="center">
 
-`Cyberboss` 是一个面向个人生活流的 agent bridge。
+# 《霸道总裁爱上患有 ADHD 的我》
+## 基于 Codex 的微信桥接系统：Cyberboss
 
-它的目标不是绑定某一个聊天渠道或某一个模型运行时，而是把这些边界拆开：
+> “你尽管在多巴胺里逃避，但我永远会在下一个时间戳抓到你。”
 
-- channel adapter
-  - 微信、Telegram、WhatsApp 等消息入口
-- runtime adapter
-  - Codex、Claude Code、Cursor、OpenClaw 等 agent 运行时
-- capability integrations
-  - timeline、reminder、diary、check-in
-- core orchestrator
-  - 统一管理会话、任务、状态和能力编排
+[![Node >=22](https://img.shields.io/badge/Node-22%2B-3C873A)](./package.json)
+[![Runtime-Codex](https://img.shields.io/badge/Runtime-Codex-111827)](#technical-stack)
+[![Bridge-Weixin](https://img.shields.io/badge/Bridge-Weixin-07C160)](#technical-stack)
+[![Timeline-Enabled](https://img.shields.io/badge/Timeline-Enabled-8b5cf6)](#core-features)
 
-## 当前阶段
+<p>
+  <a href="#user-guide">用户使用</a> ·
+  <a href="#agent-guide">Agent 接入</a> ·
+  <a href="#data-dir">本地数据</a> ·
+  <a href="#faq">FAQ</a>
+</p>
 
-这个仓库现在已经有一条最小可跑链路：
+</div>
 
-- 微信底层账号与收发能力
-- Codex runtime 连接、发消息、收完成态
-- core 内部的线程运行态记录
+Cyberboss 不是另一个平庸的番茄钟，也不是一个只会堆积任务的待办清单。
 
-后续会继续往上接授权、更多微信命令、提醒、日记、时间轴。
+它是一个将 Codex 深度接入微信的 Agent Bridge。它的存在不是为了“提醒你开始”，而是直接化身为那个拥有绝对时间感、盯死进度、在你消失太久时会主动破屏而出的“赛博老板”。
 
-当前默认启用参考 `cc-connect` 思路重写的 `weixin-v2` 实验通道。
-如果需要回退旧实现，可以设置：
+## 为什么需要 Cyberboss？
+
+对于 ADHD 或任何需要高强度外部监管的人来说，传统工具最大的 Bug 在于：它们都寄希望于你的“主动性”。但当内在驱动力失灵时，任何需要手动开启的 App 都是摆设。
+
+Cyberboss 的逻辑是管理权的让渡：
+
+- 无需主动点开始
+  它就在你的微信里，盯着你的每一句话。
+- 不可逃避的感知
+  它清楚你沉默的每一分钟意味着什么。
+- 真实的外部反馈
+  既然你无法自律，那就把管理权交给一个永远在线、拥有完美记忆、且会持续追踪上下文的 AI。
+
+<a id="core-features"></a>
+## 核心功能：全自动的赛博监管
+
+1. 绝对时间感 (Omniscient Time)
+每一条微信输入在进入 runtime 前，都会被自动打上本地时间戳。模型不再只是处理文本，它在处理“时间流”。它知道你上一秒在信誓旦旦，也知道你接下来的三个小时在人间蒸发。
+
+2. 生活轨迹自动化报表 (The Ledger of Life)
+基于已知的消息时间戳，它会像审计员一样持续补全你全天事件的开始、结束和时长，自动将细碎的聊天记录脱水、重构为结构化时间轴，并定期向你输出“处刑报表”。
+
+3. 随机轮询唤醒 (Stochastic Pulse)
+系统会在随机频率内主动戳醒模型。它会根据当前上下文自主判断：是该温柔提醒、严厉催促、默默写日记，还是调用工具查看你的状态。这种不可预测的“查岗”感，是杀掉 ADHD 拖延症的良药。
+
+4. 跨时空自我唤醒 (Local Reminder Queue)
+Reminder 队列不是给用户设的闹钟，而是模型留给未来自己的伏笔。
+
+> “约定 10:00 起床，10:05 他若没收到你的消息，将自动调用米家 MCP 强行拉开窗帘并放歌。”
+
+5. 零成本本地日志 (Zero-Token Diary)
+它会将真正值得留下的生活痕迹沉淀到本地，不依赖第三方云服务，不烧额外上下文，却能留住你们之间最真实的连接。
+
+## 也可以单独使用 Timeline
+
+如果你对 `Cyberboss` 里最感兴趣的是“生活轨迹自动化报表”这一层，那么也可以直接把时间轴能力单独拿出去用：
+
+- 项目地址：[WenXiaoWendy/timeline-for-agent](https://github.com/WenXiaoWendy/timeline-for-agent)
+- 它本身就是独立项目，不依赖微信桥接才能工作
+- 如果你不想使用 Codex，也完全可以把 `timeline-for-agent` 接进你自己的 agent、bot 或自动化系统里
+
+`Cyberboss` 的时间轴能力本质上也是构建在 `timeline-for-agent` 之上，只是这里额外把它接进了微信、提醒、日记和随机轮询这整套生活监管链路里。
+
+<a id="technical-stack"></a>
+## 技术实现
+
+- **Core**
+  Codex runtime 与共享 `codex app-server`，负责承接微信消息、维持线程状态、执行工具与审批流。
+- **Bridge**
+  微信 HTTP bridge，支持长轮询同步，把微信侧输入、输出、文件和状态变化接到同一条 agent 链路里。
+- **Task System**
+  本地任务队列，当前包含 reminder、system message、timeline screenshot 三类异步任务。
+- **Capability Layer**
+  涵盖 Timeline、Diary、Check-in、File Transfer 等核心能力，其中 `checkin` 就是随机轮询唤醒入口。
+- **Optional Tooling**
+  支持接入 MCP 与其他本地硬件/软件接口；是否启用完全取决于你的本地环境。
+
+## 开发初衷：拒绝“自律神话”
+
+对于 ADHD 来说，问题从来不是“不懂道理”，而是“意志力断层”。
+
+- 番茄钟要求你先自律
+- 待办清单要求你先整理
+- 提醒软件要求你先“记得去相信”它
+
+Cyberboss 假设你是一个完全不可控的个体：你不需要先点开始，不需要先记得回来，甚至不需要先拥有执行意志。你只需要继续活着、继续聊天，剩下的由系统去记录时间、补齐轨迹、主动出现。
+
+<a id="user-guide"></a>
+## 用户使用
+
+### 环境前提
+
+- Node.js `>= 22`
+- 本机已安装 `codex`
+- 如果需要截图，本机需要可用的 Chrome / Chromium / Edge
+
+### 获取源码与安装依赖
+
+当前没有发布 npm 包。正确用法是先拉源码，再在仓库目录里安装依赖：
 
 ```bash
-export CYBERBOSS_WEIXIN_ADAPTER=legacy
-```
-
-## 命令分层
-
-### 1. Core Action
-
-`Cyberboss` 内部先定义稳定动作，再由不同通道映射成自己的命令形态。
-
-- `app.login`
-- `app.accounts`
-- `app.start`
-- `app.doctor`
-- `workspace.bind`
-- `workspace.status`
-- `thread.new`
-- `thread.switch`
-- `thread.stop`
-- `approval.accept_once`
-- `approval.accept_workspace`
-- `approval.reject_once`
-- `model.inspect`
-- `model.select`
-- `channel.send_file`
-- `timeline.write`
-- `reminder.create`
-- `diary.append`
-- `app.help`
-
-### 2. 当前终端命令
-
-```bash
+git clone https://github.com/WenXiaoWendy/cyberboss.git
+cd cyberboss
 npm install
-npm run check
-npm run login
-npm run accounts
-npm run start
-npm run start:checkin
-npm run doctor
-npm run help
-npm run channel:send-file -- --path /绝对路径
 ```
 
-目前终端只把启动和诊断平铺在顶层，不把提醒、日记、时间轴继续堆成一排顶层命令。
+不要把 README 里的命令理解成“全局安装后直接可用”的 npm package 命令。
 
-后续能力会下沉成子命令，例如：
+### 在跑第一个命令前先配环境变量
 
-```bash
-npm run reminder:write -- --delay 30m --text "提醒内容"
-npm run reminder:write -- --delay 1h30m --text "提醒内容"
-npm run reminder:write -- --at "2026-04-07 21:30" --text "提醒内容"
-npm run diary:write -- --title 标题 --text "内容"
-npm run diary:write -- --date 2026-04-06 --title "4.6" --text "内容"
-npm run system:send -- --text "系统消息"
+`Cyberboss` 会按这个顺序读取环境变量：
+
+- 当前项目目录下的 `.env`
+- `${HOME}/.cyberboss/.env`
+- 当前 shell 环境
+
+建议你在第一次运行任何命令前，至少先配置这几项：
+
+```dotenv
+CYBERBOSS_USER_NAME=你的名字
+CYBERBOSS_USER_GENDER=female
+CYBERBOSS_ALLOWED_USER_IDS=你的微信 user id
+CYBERBOSS_WORKSPACE_ROOT=/绝对路径/你的项目目录
 ```
 
-`checkin` 现在更推荐跟随启动一起开，用 `npm run start:checkin`；单独的 `system:checkin` 仍保留作底层入口。
+可选常用项：
 
-目前已接入 `reminder`、`diary`、`system`、`timeline` 这四组脚本。
+```dotenv
+CYBERBOSS_ACCOUNT_ID=
+CYBERBOSS_CODEX_ENDPOINT=ws://127.0.0.1:8765
+CYBERBOSS_WEIXIN_ADAPTER=v2
+```
 
-其中日记命令要注意：
+`CYBERBOSS_ALLOWED_USER_IDS` 支持逗号分隔多个 user id。
 
-- `--title` 只影响这条日记的小标题
-- `--date` 才决定写入哪个 `YYYY-MM-DD.md`
-- 如果你想把标题写成 `4.6`，同时又落到 `2026-04-06.md`，需要两个都传
+原因有两个：
 
+- 第一次运行任意 `cyberboss` 命令时，会自动生成 `~/.cyberboss/weixin-instructions.md`
+- 如果你没先设置 `CYBERBOSS_USER_NAME` 和 `CYBERBOSS_USER_GENDER`，生成出来的 instructions 可能不符合真实情况
 
-如果你想把微信里当前绑定的同一条 Codex 线程在本机终端继续打开，稳定流程是：
+另外，如果你想要更强的“push 感”，建议一开始先不要主动大改 instructions 模板。先让 agent 在真实交流里自己更新行为，再回头只修明显不对的部分。
+
+### 用户自己会用到的终端命令
+
+- `npm run login`
+  扫码登录微信，并把 bot 账号保存到本地
+- `npm run accounts`
+  查看本地已保存的账号
+- `npm run start`
+  启动微信桥接
+- `npm run start:checkin`
+  启动微信桥接，并开启随机轮询唤醒
+- `npm run doctor`
+  查看当前配置、channel/runtime 边界和线程状态
+- `npm run help`
+  查看可直接执行的命令入口
+
+这里的 `checkin` 指的就是“随机轮询唤醒”能力，不是固定整点提醒。
+
+### 用户在微信里会用到的命令
+
+- `/bind /绝对路径`
+  绑定当前聊天使用的项目目录
+- `/status`
+  查看当前绑定项目、线程、模型和上下文状态
+- `/new`
+  切到新线程草稿
+- `/switch <threadId>`
+  切换到指定线程
+- `/stop`
+  停止当前线程里的运行
+- `/yes`
+  允许当前待处理授权一次
+- `/always`
+  在当前项目内持续允许同前缀命令
+- `/no`
+  拒绝当前待处理授权
+- `/model`
+  查看当前模型
+- `/model <id>`
+  切换模型
+- `/help`
+  查看微信内命令帮助
+
+普通文本消息会直接发送到当前绑定线程。如果当前还没绑定项目，先执行：
+
+```text
+/bind /绝对路径
+```
+
+### 双端监控同一条线程
+
+如果你想把微信里当前绑定的同一条 Codex 线程同步到本机终端继续看、继续接管，稳定流程是：
+
+第一个终端：
 
 ```bash
-cd /Users/tingyiwen/Dev/cyberboss
 ./scripts/start_shared_wechat.sh
 ```
 
-保持这个终端不要退出。再开第二个终端执行：
+保持这个终端不要退出。第二个终端：
 
 ```bash
-cd /Users/tingyiwen/Dev/cyberboss
 ./scripts/open_wechat_thread.sh
 ```
 
 辅助诊断：
 
-- `./scripts/show_shared_status.sh` 用来检查共享 `app-server`、共享 `cyberboss` 和最近日志
-- `./scripts/open_shared_wechat_thread.sh` 现在只做前置检查和接入，不再偷偷启动后台 `cyberboss`
+- `./scripts/show_shared_status.sh`
+- `./scripts/open_shared_wechat_thread.sh`
 
-禁止事项：
+注意：
 
 - 不要单独执行 `node ./bin/cyberboss.js start --checkin`，除非已经明确设置 `CYBERBOSS_CODEX_ENDPOINT=ws://127.0.0.1:8765`
-- 不要让微信桥接走 `spawn` 私有 runtime；微信和终端必须同时连接同一个共享 `codex app-server`
-- 不要同时保留多套 `cyberboss` 进程；微信侧只应该有一条后台桥接链路
-- 不要把 `./scripts/start_shared_wechat.sh` 放到后台跑；它就是共享桥接主进程，必须保活在一个独立终端里
+- 不要让微信桥接走 `spawn` 私有 runtime；微信和终端必须连接同一个共享 `codex app-server`
+- 不要同时保留多套 `cyberboss` 进程
+- 不要把 `./scripts/start_shared_wechat.sh` 放到后台跑；它就是共享桥接主进程
 
-时间轴命令：
+<a id="data-dir"></a>
+## 本地数据放在哪里
 
-```bash
-npm run timeline:write -- --date YYYY-MM-DD --stdin
-npm run timeline:build
-npm run timeline:serve
-npm run timeline:dev
-sh "$CYBERBOSS_HOME/scripts/timeline-screenshot.sh" --send
-```
-
-其中截图的稳定入口是 `sh "$CYBERBOSS_HOME/scripts/timeline-screenshot.sh" --send`，它只负责把截图任务写进本地队列，再由正在运行的微信桥执行截图并发回聊天。
-
-如果要把本地已有文件直接发回当前微信聊天，使用：
-
-```bash
-npm run channel:send-file -- --path /绝对路径
-```
-
-可选参数：
-
-- `--user <wechatUserId>`：覆盖默认接收用户
-
-时间轴截图仍优先走它自己的稳定入口：
-
-```bash
-sh "$CYBERBOSS_HOME/scripts/timeline-screenshot.sh" --send
-```
-
-### 3. 当前已接入的微信命令
-
-已经接入：
-
-- `/bind` -> `workspace.bind`
-- `/status` -> `workspace.status`
-- `/new` -> `thread.new`
-- `/stop` -> `thread.stop`
-- `/switch <threadId>` -> `thread.switch`
-- `/yes` -> `approval.accept_once`
-- `/always` -> `approval.accept_workspace`
-- `/no` -> `approval.reject_once`
-- `/model` -> `model.inspect`
-- `/model <id>` -> `model.select`
-- `/help` -> `app.help`
-
-其中：
-
-- `/status` 会合并原先 `where` 和 `usage` 的职责
-- `/help` 保留
-- `/reread` 暂不保留，优先交给自然语言触发
-- 发文件回聊天保留为内部能力，不再暴露成微信命令
-
-### 5. 为什么要分层
-
-- 终端命令和微信命令不需要长得一样
-- Codex、Claude Code、Cursor 以后也不需要共享同一套用户可见命令
-- 只要内部 action 稳定，通道层就能各自做最合适的映射
-
-## 默认约定
-
-- `CYBERBOSS_STATE_DIR`
-  - 默认：`${HOME}/.cyberboss`
-  - 这是本地状态目录，不是线程工作目录；微信线程和终端线程仍然应该开在你的项目目录里，不需要切到 `${HOME}`
-- `CYBERBOSS_USER_NAME`
-  - 默认：`用户`
-  - 用来替换默认文案、check-in 触发和本地 instructions 里的用户名
-- `CYBERBOSS_CHANNEL`
-  - 默认：`weixin`
-- `CYBERBOSS_RUNTIME`
-  - 默认：`codex`
-- `CYBERBOSS_TIMELINE_COMMAND`
-  - 默认：`timeline-for-agent`
-- `CYBERBOSS_WEIXIN_BASE_URL`
-  - 默认：`https://ilinkai.weixin.qq.com`
-- `CYBERBOSS_ACCOUNT_ID`
-  - 多账号时指定当前使用的微信 bot 账号
-
-如果你不想在本地 instructions 和默认触发文案里继续用 `用户`，可以先设置：
-
-```bash
-export CYBERBOSS_USER_NAME="你的名字"
-```
-
-后续再把 `~/.cyberboss/weixin-instructions.md` 里对应的人名一起替换掉。
-
-## 结构
+默认状态目录是：
 
 ```text
-src/
-  adapters/
-    channel/
-    runtime/
-  core/
-  integrations/
-docs/
+${HOME}/.cyberboss
 ```
 
-详细拆分计划见：
+常见内容：
 
-- [docs/architecture.md](./docs/architecture.md)
+- `accounts/`
+  微信 bot 账号信息
+- `sessions.json`
+  工作区、线程、模型和审批状态
+- `sync-buffers/`
+  微信长轮询同步缓冲
+- `weixin-instructions.md`
+  首次运行自动生成的本地 instructions
+- `reminder-queue.json`
+  reminder 队列
+- `system-message-queue.json`
+  system / checkin 队列
+- `timeline-screenshot-queue.json`
+  截图任务队列
+- `diary/`
+  本地日记
+- `timeline/`
+  timeline 数据、site、shots
+- `logs/`
+  共享 bridge 和 shared app-server 日志
 
-命令与动作映射见：
+这个目录只是本地状态目录，不是线程工作目录；微信线程和终端线程仍然应该开在你的项目目录里。
+
+仓库本身不包含你的微信账号、`context_token`、会话文件或其他运行态数据；这些都保存在状态目录里。
+
+<a id="agent-guide"></a>
+## Agent 接入
+
+下面这些命令主要是给 agent / 自动化能力使用的，不是普通用户每天手敲的主入口。
+
+### Agent 常用命令
+
+- `npm run reminder:write -- --delay 30m --text "提醒内容"`
+  给未来的自己留 reminder
+- `npm run reminder:write -- --at "2026-04-07 21:30" --text "提醒内容"`
+  写明确时间点 reminder
+- `npm run diary:write -- --title 标题 --text "内容"`
+  写本地日记
+- `npm run diary:write -- --date 2026-04-06 --title "4.6" --text "内容"`
+  写指定日期日记
+- `npm run timeline:write -- --date YYYY-MM-DD --stdin`
+  增量写入时间轴
+- `npm run timeline:build`
+  构建时间轴静态页面
+- `npm run timeline:serve`
+  启动时间轴静态页面服务
+- `npm run timeline:dev`
+  启动时间轴热更新开发服务
+- `sh "$CYBERBOSS_HOME/scripts/timeline-screenshot.sh" --send`
+  稳定截图入口，会把截图任务交给当前微信桥执行
+- `npm run channel:send-file -- --path /绝对路径`
+  把本地已有文件直接发回当前微信聊天
+- `npm run system:send -- --text "系统消息"`
+  向内部系统队列写入一条不可见触发消息
+- `npm run system:checkin`
+  底层随机轮询入口，通常只用于调试；正常用户直接用 `npm run start:checkin`
+
+### Agent 使用约定
+
+- 优先使用 `README`、`--help` 和 [docs/commands.md](./docs/commands.md) 里已经暴露的稳定入口
+- 参数不清楚时先看 `--help`
+- 第一次执行失败时，先反馈报错，不要立刻读源码
+- 如果只是发文件或截图回微信，优先用现成命令，不要去找内部 `channelAdapter.sendFile(...)`
+
+## 文档入口
 
 - [docs/commands.md](./docs/commands.md)
 
-## 当前已接入的微信底层能力
+<a id="faq"></a>
+## FAQ
 
-- 微信扫码登录
-- bot token 本地持久化
-- 已保存账号列表
-- context token 本地持久化
-- 微信 HTTP API 基础访问封装
+### 为什么不是直接 `npm install cyberboss`？
 
-## 当前已接入的 Codex runtime 底层能力
+因为当前没有发布 npm package。正确方式是 `git clone` 仓库后，在项目目录里执行 `npm install`。
 
-- Codex app-server / websocket RPC client
-- session store
-- model catalog 规范化
-- runtime adapter
-- assistant 回复事件流
-- 授权响应
-- 线程运行态记录
+### `checkin` 到底是什么？
+
+`checkin` 就是“随机轮询唤醒”能力。系统会在一个随机时间点唤醒模型，让它自己判断现在该不该主动出现。
+
+### 为什么要在第一次运行前就设置用户名和性别？
+
+因为第一次运行任意 `cyberboss` 命令时，会自动生成 `~/.cyberboss/weixin-instructions.md`。先配好 `CYBERBOSS_USER_NAME` 和 `CYBERBOSS_USER_GENDER`，可以避免生成明显不符合现实的 instructions。
+
+### 为什么不建议一开始就大改 instructions？
+
+如果你想要更强的“赛博老板”效果，最好先让 agent 在真实对话里自己长出节奏，再回头修正明显不对的部分。过早手工写死行为，通常会让它更像脚本，不像真的在盯你。
