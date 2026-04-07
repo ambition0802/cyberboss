@@ -281,7 +281,7 @@ class CyberbossApp {
     }).catch(() => {});
 
     try {
-      await this.runtimeAdapter.sendTextTurn({
+      const turn = await this.runtimeAdapter.sendTextTurn({
         bindingKey,
         workspaceRoot,
         text: prepared.text,
@@ -292,10 +292,16 @@ class CyberbossApp {
           senderId: prepared.senderId,
         },
       });
+      this.streamDelivery.setReplyTargetForThread(turn.threadId, {
+        userId: prepared.senderId,
+        contextToken: prepared.contextToken,
+        provider: prepared.provider,
+      });
       this.scheduleRuntimeEventWatchdog({
         bindingKey,
         workspaceRoot,
         normalized: prepared,
+        threadId: turn.threadId,
       });
     } catch (error) {
       const messageText = error instanceof Error ? error.message : String(error || "unknown error");
@@ -307,10 +313,11 @@ class CyberbossApp {
     }
   }
 
-  scheduleRuntimeEventWatchdog({ bindingKey, workspaceRoot, normalized }) {
+  scheduleRuntimeEventWatchdog({ bindingKey, workspaceRoot, normalized, threadId = "" }) {
     const sessionStore = this.runtimeAdapter.getSessionStore();
-    const threadId = sessionStore.getThreadIdForWorkspace(bindingKey, workspaceRoot);
-    const normalizedThreadId = normalizeCommandArgument(threadId);
+    const candidateThreadId = normalizeCommandArgument(threadId)
+      || sessionStore.getThreadIdForWorkspace(bindingKey, workspaceRoot);
+    const normalizedThreadId = normalizeCommandArgument(candidateThreadId);
     if (!normalizedThreadId) {
       return;
     }

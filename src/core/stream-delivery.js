@@ -3,6 +3,7 @@ class StreamDelivery {
     this.channelAdapter = channelAdapter;
     this.sessionStore = sessionStore;
     this.replyTargetByBindingKey = new Map();
+    this.replyTargetByThreadId = new Map();
     this.stateByThreadId = new Map();
   }
 
@@ -15,6 +16,22 @@ class StreamDelivery {
       contextToken: String(target.contextToken).trim(),
       provider: normalizeText(target.provider),
     });
+  }
+
+  setReplyTargetForThread(threadId, target) {
+    const normalizedThreadId = normalizeText(threadId);
+    if (!normalizedThreadId || !target?.userId || !target?.contextToken) {
+      return;
+    }
+    this.replyTargetByThreadId.set(normalizedThreadId, {
+      userId: String(target.userId).trim(),
+      contextToken: String(target.contextToken).trim(),
+      provider: normalizeText(target.provider),
+    });
+    const state = this.stateByThreadId.get(normalizedThreadId);
+    if (state) {
+      state.replyTarget = this.replyTargetByThreadId.get(normalizedThreadId);
+    }
   }
 
   async handleRuntimeEvent(event) {
@@ -111,6 +128,11 @@ class StreamDelivery {
   }
 
   refreshBinding(state) {
+    const directTarget = this.replyTargetByThreadId.get(state.threadId);
+    if (directTarget) {
+      state.replyTarget = directTarget;
+      return;
+    }
     const linked = this.sessionStore.findBindingForThreadId(state.threadId);
     if (!linked?.bindingKey) {
       return;
