@@ -288,7 +288,7 @@ ${HOME}/.cyberboss
   启动时间轴静态页面服务
 - `npm run timeline:dev`
   启动时间轴热更新开发服务
-- `sh "$CYBERBOSS_HOME/scripts/timeline-screenshot.sh" --send`
+- `npm --prefix "$CYBERBOSS_HOME" run timeline:screenshot -- --send`
   稳定截图入口，会把截图任务交给当前微信桥执行
 - `npm run channel:send-file -- --path /绝对路径`
   把本地已有文件直接发回当前微信聊天

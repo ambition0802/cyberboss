@@ -4,6 +4,7 @@ const path = require("path");
 const dotenv = require("dotenv");
 
 const { readConfig } = require("./core/config");
+const { renderInstructionTemplate } = require("./core/instructions-template");
 const { CyberbossApp } = require("./core/app");
 const { createTimelineIntegration } = require("./integrations/timeline");
 const { runDiaryWriteCommand } = require("./app/diary-write-cli");
@@ -65,24 +66,12 @@ function ensureInstructionsTemplate(config) {
   }
 
   const userName = String(config?.userName || "").trim() || "用户";
-  const pronoun = resolveUserPronoun(config?.userGender);
-  const content = template
-    .replaceAll("{{USER_NAME}}", userName)
-    .replaceAll("她", pronoun)
-    .trimEnd() + "\n";
+  const content = renderInstructionTemplate(template, {
+    ...config,
+    userName,
+  }).trimEnd() + "\n";
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, content, "utf8");
-}
-
-function resolveUserPronoun(gender) {
-  const normalized = String(gender || "").trim().toLowerCase();
-  if (normalized === "male" || normalized === "man" || normalized === "m" || normalized === "男") {
-    return "他";
-  }
-  if (normalized === "neutral" || normalized === "nonbinary" || normalized === "nb" || normalized === "ta") {
-    return "TA";
-  }
-  return "她";
 }
 
 function printHelp() {

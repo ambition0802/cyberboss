@@ -1,4 +1,5 @@
 const fs = require("fs");
+const { renderInstructionTemplate } = require("../../../core/instructions-template");
 const { CodexRpcClient } = require("./rpc-client");
 const { mapCodexMessageToRuntimeEvent } = require("./events");
 const {
@@ -109,7 +110,7 @@ function createCodexRuntimeAdapter(config) {
     async refreshThreadInstructions({ threadId, workspaceRoot, model = "" }) {
       const runtimeClient = ensureClient();
       await this.initialize();
-      const refreshText = buildInstructionRefreshText(config.weixinInstructionsFile);
+      const refreshText = buildInstructionRefreshText(config);
       await runtimeClient.resumeThread({ threadId });
       const completion = waitForTurnCompletion(runtimeClient, threadId);
       await runtimeClient.sendUserMessage({
@@ -134,7 +135,7 @@ function createCodexRuntimeAdapter(config) {
           throw new Error("thread/start did not return a thread id");
         }
         sessionStore.setThreadIdForWorkspace(bindingKey, workspaceRoot, threadId, metadata);
-        outboundText = buildOpeningTurnText(config.weixinInstructionsFile, text);
+        outboundText = buildOpeningTurnText(config, text);
       } else {
         await runtimeClient.resumeThread({ threadId }).catch(async () => {
           sessionStore.clearThreadIdForWorkspace(bindingKey, workspaceRoot);
@@ -144,7 +145,7 @@ function createCodexRuntimeAdapter(config) {
             throw new Error("thread/start did not return a thread id");
           }
           sessionStore.setThreadIdForWorkspace(bindingKey, workspaceRoot, threadId, metadata);
-          outboundText = buildOpeningTurnText(config.weixinInstructionsFile, text);
+          outboundText = buildOpeningTurnText(config, text);
         });
       }
 
@@ -159,8 +160,8 @@ function createCodexRuntimeAdapter(config) {
   };
 }
 
-function buildOpeningTurnText(instructionsFile, userText) {
-  const instructions = loadWechatInstructions(instructionsFile);
+function buildOpeningTurnText(config, userText) {
+  const instructions = loadWechatInstructions(config);
   const normalizedText = String(userText || "").trim();
   if (!instructions) {
     return normalizedText;
@@ -177,8 +178,8 @@ function buildOpeningTurnText(instructionsFile, userText) {
   ].join("\n").trim();
 }
 
-function buildInstructionRefreshText(instructionsFile) {
-  const instructions = loadWechatInstructions(instructionsFile);
+function buildInstructionRefreshText(config) {
+  const instructions = loadWechatInstructions(config);
   if (!instructions) {
     return "Refresh your WeChat behavior for this existing thread. Reply in one short Chinese sentence confirming that you have updated your behavior for this thread.";
   }
@@ -193,13 +194,27 @@ function buildInstructionRefreshText(instructionsFile) {
   ].join("\n").trim();
 }
 
-function loadWechatInstructions(filePath) {
+function loadWechatInstructions(config = {}) {
+  const persona = loadInstructionFile(config.weixinInstructionsFile, config);
+  const operations = loadInstructionFile(config.weixinOperationsFile, config);
+  const sections = [];
+  if (persona) {
+    sections.push(persona);
+  }
+  if (operations) {
+    sections.push(operations);
+  }
+  return sections.join("\n\n").trim();
+}
+
+function loadInstructionFile(filePath, config = {}) {
   const normalizedPath = typeof filePath === "string" ? filePath.trim() : "";
   if (!normalizedPath) {
     return "";
   }
   try {
-    return fs.readFileSync(normalizedPath, "utf8").trim();
+    const raw = fs.readFileSync(normalizedPath, "utf8");
+    return renderInstructionTemplate(raw, config).trim();
   } catch {
     return "";
   }

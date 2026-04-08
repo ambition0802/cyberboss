@@ -57,6 +57,9 @@ function parseTimelineScreenshotArgs(args) {
       options.help = true;
       continue;
     }
+    if (token === "--send") {
+      continue;
+    }
     if (token === "--user") {
       const value = String(args[index + 1] || "").trim();
       if (!value || value.startsWith("--")) {
@@ -89,13 +92,13 @@ function parseTimelineScreenshotArgs(args) {
 
 function printTimelineScreenshotHelp() {
   console.log(`
-用法: sh "$CYBERBOSS_HOME/scripts/timeline-screenshot.sh" --send [--user <wechatUserId>] [--output /绝对路径] [其他 timeline screenshot 参数]
+用法: npm run timeline:screenshot -- --send [--user <wechatUserId>] [--output /绝对路径] [其他 timeline screenshot 参数]
 
 说明:
   这条命令只负责把截图任务排进本地队列，真正截图由正在运行的微信 bridge 执行。
 
 示例:
-  sh "$CYBERBOSS_HOME/scripts/timeline-screenshot.sh" --send --selector timeline
+  npm run timeline:screenshot -- --send --selector timeline
 `);
 }
 

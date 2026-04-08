@@ -99,10 +99,10 @@
 - `npm run timeline:build`
 - `npm run timeline:serve`
 - `npm run timeline:dev`
-- `npm run timeline:screenshot`
+- `npm run timeline:screenshot -- --send`
 
 说明：
-- `timeline:screenshot` 默认会把截图发回当前微信用户，不需要再额外执行发送命令。
+- `timeline:screenshot -- --send` 会把截图任务发给当前微信桥执行，并自动把结果回传给当前微信用户。
 
 当前文档里列出的 `reminder / diary / system / timeline` 都已可直接使用。
 

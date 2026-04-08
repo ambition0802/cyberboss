@@ -372,10 +372,10 @@ function buildTopicUsage(topic) {
       return "npm run system:send -- <args> / npm run system:checkin";
     case "timeline":
       return [
-        "npm run timeline:write -- <args> / npm run timeline:build / npm run timeline:serve / npm run timeline:dev / sh \"$CYBERBOSS_HOME/scripts/timeline-screenshot.sh\" --send",
+        "npm run timeline:write -- <args> / npm run timeline:build / npm run timeline:serve / npm run timeline:dev / npm run timeline:screenshot -- --send",
         "",
         "补充：",
-        "  timeline 截图稳定入口是 timeline-screenshot.sh，它会把任务交给当前微信桥执行",
+        "  timeline 截图稳定入口是 npm run timeline:screenshot -- --send，它会把任务交给当前微信桥执行",
       ].join("\n");
     default:
       return "npm run <script>";
@@ -412,7 +412,7 @@ function toNpmRunExample(commandText) {
     case "timeline dev":
       return "npm run timeline:dev";
     case "timeline screenshot":
-      return "sh \"$CYBERBOSS_HOME/scripts/timeline-screenshot.sh\" --send";
+      return "npm run timeline:screenshot -- --send";
     default:
       return normalized;
   }

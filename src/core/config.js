@@ -28,6 +28,7 @@ function readConfig() {
     systemMessageQueueFile: path.join(stateDir, "system-message-queue.json"),
     timelineScreenshotQueueFile: path.join(stateDir, "timeline-screenshot-queue.json"),
     weixinInstructionsFile: path.join(stateDir, "weixin-instructions.md"),
+    weixinOperationsFile: path.resolve(__dirname, "..", "..", "templates", "weixin-operations.md"),
     diaryDir: path.join(stateDir, "diary"),
     syncBufferDir: path.join(stateDir, "sync-buffers"),
     codexEndpoint: readTextEnv("CYBERBOSS_CODEX_ENDPOINT"),
