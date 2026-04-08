@@ -3,8 +3,8 @@ class StreamDelivery {
     this.channelAdapter = channelAdapter;
     this.sessionStore = sessionStore;
     this.replyTargetByBindingKey = new Map();
-    this.replyTargetByThreadId = new Map();
-    this.stateByThreadId = new Map();
+    this.pendingReplyTargetsByThreadId = new Map();
+    this.stateByRunKey = new Map();
   }
 
   setReplyTarget(bindingKey, target) {
@@ -18,42 +18,45 @@ class StreamDelivery {
     });
   }
 
-  setReplyTargetForThread(threadId, target) {
+  queueReplyTargetForThread(threadId, target) {
     const normalizedThreadId = normalizeText(threadId);
     if (!normalizedThreadId || !target?.userId || !target?.contextToken) {
       return;
     }
-    this.replyTargetByThreadId.set(normalizedThreadId, {
+    const queue = this.pendingReplyTargetsByThreadId.get(normalizedThreadId) || [];
+    queue.push({
       userId: String(target.userId).trim(),
       contextToken: String(target.contextToken).trim(),
       provider: normalizeText(target.provider),
     });
-    const state = this.stateByThreadId.get(normalizedThreadId);
-    if (state) {
-      state.replyTarget = this.replyTargetByThreadId.get(normalizedThreadId);
-    }
+    this.pendingReplyTargetsByThreadId.set(normalizedThreadId, queue);
   }
 
   async handleRuntimeEvent(event) {
     const threadId = normalizeText(event?.payload?.threadId);
+    const turnId = normalizeText(event?.payload?.turnId);
     if (!threadId) {
       return;
     }
 
-    const state = this.ensureThreadState(threadId);
     switch (event.type) {
-      case "runtime.turn.started":
-        state.turnId = normalizeText(event.payload.turnId) || state.turnId;
-        this.refreshBinding(state);
+      case "runtime.turn.started": {
+        const state = this.ensureRunState(threadId, turnId);
+        state.turnId = turnId || state.turnId;
+        this.attachReplyTarget(state);
         return;
-      case "runtime.reply.delta":
+      }
+      case "runtime.reply.delta": {
+        const state = this.ensureRunState(threadId, turnId);
         this.upsertItem(state, {
           itemId: normalizeText(event.payload.itemId) || `item-${state.itemOrder.length + 1}`,
           text: normalizeLineEndings(event.payload.text),
           completed: false,
         });
         return;
-      case "runtime.reply.completed":
+      }
+      case "runtime.reply.completed": {
+        const state = this.ensureRunState(threadId, turnId);
         this.upsertItem(state, {
           itemId: normalizeText(event.payload.itemId) || `item-${state.itemOrder.length + 1}`,
           text: normalizeLineEndings(event.payload.text),
@@ -61,13 +64,16 @@ class StreamDelivery {
         });
         await this.flush(state, { force: false });
         return;
-      case "runtime.turn.completed":
-        state.turnId = normalizeText(event.payload.turnId) || state.turnId;
+      }
+      case "runtime.turn.completed": {
+        const state = this.ensureRunState(threadId, turnId);
+        state.turnId = turnId || state.turnId;
         await this.flush(state, { force: true });
-        this.disposeThreadState(threadId);
+        this.disposeRunState(state.runKey);
         return;
+      }
       case "runtime.turn.failed":
-        this.disposeThreadState(threadId);
+        this.disposeRunState(buildRunKey(threadId, turnId));
         return;
       default:
         return;
@@ -81,8 +87,8 @@ class StreamDelivery {
       return;
     }
 
-    const state = this.ensureThreadState(normalizedThreadId);
-    this.refreshBinding(state);
+    const state = this.ensureRunState(normalizedThreadId, "");
+    this.attachReplyTarget(state);
     if (!state.itemOrder.length) {
       this.upsertItem(state, {
         itemId: "final",
@@ -102,44 +108,52 @@ class StreamDelivery {
     }
 
     await this.flush(state, { force: true });
-    this.disposeThreadState(normalizedThreadId);
+    this.disposeRunState(state.runKey);
   }
 
-  ensureThreadState(threadId) {
-    const existing = this.stateByThreadId.get(threadId);
+  ensureRunState(threadId, turnId = "") {
+    const runKey = buildRunKey(threadId, turnId);
+    const existing = this.stateByRunKey.get(runKey);
     if (existing) {
       return existing;
     }
 
     const created = {
+      runKey,
       threadId,
       bindingKey: "",
       replyTarget: null,
-      turnId: "",
+      turnId: normalizeText(turnId),
       itemOrder: [],
       items: new Map(),
       sentText: "",
       sendChain: Promise.resolve(),
       flushPromise: null,
     };
-    this.stateByThreadId.set(threadId, created);
-    this.refreshBinding(created);
+    this.stateByRunKey.set(runKey, created);
+    this.attachReplyTarget(created);
     return created;
   }
 
-  refreshBinding(state) {
-    const directTarget = this.replyTargetByThreadId.get(state.threadId);
-    if (directTarget) {
-      state.replyTarget = directTarget;
-      return;
+  attachReplyTarget(state) {
+    if (!state.replyTarget) {
+      const queue = this.pendingReplyTargetsByThreadId.get(state.threadId) || [];
+      if (queue.length) {
+        state.replyTarget = queue.shift();
+        if (queue.length) {
+          this.pendingReplyTargetsByThreadId.set(state.threadId, queue);
+        } else {
+          this.pendingReplyTargetsByThreadId.delete(state.threadId);
+        }
+      }
     }
     const linked = this.sessionStore.findBindingForThreadId(state.threadId);
     if (!linked?.bindingKey) {
       return;
     }
     state.bindingKey = linked.bindingKey;
-    const target = this.replyTargetByBindingKey.get(linked.bindingKey);
-    if (target) {
+    if (!state.replyTarget) {
+      const target = this.replyTargetByBindingKey.get(linked.bindingKey);
       state.replyTarget = target;
     }
   }
@@ -195,7 +209,7 @@ class StreamDelivery {
       .catch(() => {})
       .then(() => this.flushNow(state, { force }));
     const tracked = current.finally(() => {
-      const latestState = this.stateByThreadId.get(state.threadId);
+      const latestState = this.stateByRunKey.get(state.runKey);
       if (latestState && latestState.flushPromise === tracked) {
         latestState.flushPromise = null;
       }
@@ -249,9 +263,21 @@ class StreamDelivery {
     await state.sendChain;
   }
 
-  disposeThreadState(threadId) {
-    this.stateByThreadId.delete(threadId);
+  disposeRunState(runKey) {
+    const normalizedRunKey = normalizeText(runKey);
+    if (!normalizedRunKey) {
+      return;
+    }
+    this.stateByRunKey.delete(normalizedRunKey);
   }
+}
+
+function buildRunKey(threadId, turnId = "") {
+  const normalizedThreadId = normalizeText(threadId);
+  const normalizedTurnId = normalizeText(turnId);
+  return normalizedTurnId
+    ? `${normalizedThreadId}:${normalizedTurnId}`
+    : `${normalizedThreadId}:pending`;
 }
 
 function buildReplyText(state, { completedOnly }) {

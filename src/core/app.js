@@ -292,7 +292,7 @@ class CyberbossApp {
           senderId: prepared.senderId,
         },
       });
-      this.streamDelivery.setReplyTargetForThread(turn.threadId, {
+      this.streamDelivery.queueReplyTargetForThread(turn.threadId, {
         userId: prepared.senderId,
         contextToken: prepared.contextToken,
         provider: prepared.provider,
