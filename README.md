@@ -153,6 +153,8 @@ CYBERBOSS_WEIXIN_ADAPTER=v2
 
 另外，如果你想要更强的“push 感”，建议一开始先不要主动大改 instructions 模板。先让 agent 在真实交流里自己更新行为，再回头只修明显不对的部分。
 
+如果你要跑共享线程，建议也在第一次启动前就把 `CYBERBOSS_WORKSPACE_ROOT` 配好。这样 `shared:open` 会优先接到你当前项目对应的那条线程，而不是回退到别的历史绑定。
+
 ### 用户自己会用到的终端命令
 
 - `npm run login`
@@ -163,6 +165,10 @@ CYBERBOSS_WEIXIN_ADAPTER=v2
   启动微信桥接
 - `npm run start:checkin`
   启动微信桥接，并开启随机轮询唤醒
+- `npm run shared:start`
+  跨平台启动共享 `codex app-server` 和共享微信桥接；Windows / macOS / Linux 都优先用这个入口
+- `npm run shared:open`
+  跨平台接入当前微信绑定的那条共享线程
 - `npm run doctor`
   查看当前配置、channel/runtime 边界和线程状态
 - `npm run help`
@@ -208,26 +214,26 @@ CYBERBOSS_WEIXIN_ADAPTER=v2
 第一个终端：
 
 ```bash
-./scripts/start_shared_wechat.sh
+npm run shared:start
 ```
 
 保持这个终端不要退出。第二个终端：
 
 ```bash
-./scripts/open_wechat_thread.sh
+npm run shared:open
 ```
 
 辅助诊断：
 
-- `./scripts/show_shared_status.sh`
-- `./scripts/open_shared_wechat_thread.sh`
+- `./scripts/show_shared_status.sh`（当前仍是 Unix shell 脚本，更适合 macOS / Linux）
 
 注意：
 
 - 不要单独执行 `node ./bin/cyberboss.js start --checkin`，除非已经明确设置 `CYBERBOSS_CODEX_ENDPOINT=ws://127.0.0.1:8765`
 - 不要让微信桥接走 `spawn` 私有 runtime；微信和终端必须连接同一个共享 `codex app-server`
 - 不要同时保留多套 `cyberboss` 进程
-- 不要把 `./scripts/start_shared_wechat.sh` 放到后台跑；它就是共享桥接主进程
+- 不要把 `npm run shared:start` 放到后台跑；它就是共享桥接主进程
+- Windows 用户不要再使用 `.sh` 入口；共享启动和接管请统一使用 `npm run shared:start` / `npm run shared:open`
 
 <a id="data-dir"></a>
 ## 本地数据放在哪里

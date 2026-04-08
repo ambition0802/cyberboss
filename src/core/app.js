@@ -1365,10 +1365,11 @@ function buildReminderSystemTrigger(reminder, config = {}) {
   const reminderText = String(reminder?.text || "").trim();
   const userName = String(config?.userName || "").trim() || "用户";
   return [
-    "提醒到点了。",
-    `给${userName}发一条自然简短的微信提醒。`,
-    "别提内部触发，别机械复述原文。",
-    `内容：${reminderText}`,
+    "A scheduled reminder is due.",
+    `Send ${userName} one short and natural WeChat message.`,
+    "Do not mention internal triggers.",
+    "Do not mechanically repeat the reminder text.",
+    `Reminder: ${reminderText}`,
   ].join("\n");
 }
 
@@ -1393,22 +1394,22 @@ function buildCodexInboundText(normalized, persisted = {}, config = {}) {
     if (lines.length) {
       lines.push("");
     }
-    lines.push(`${userName}发来了图片/附件。已保存到本地数据目录：`);
+    lines.push(`${userName} sent image/file attachments. They were saved under the local data directory:`);
     for (const item of saved) {
-      const suffix = item.sourceFileName ? `（原文件名：${item.sourceFileName}）` : "";
+      const suffix = item.sourceFileName ? ` (original name: ${item.sourceFileName})` : "";
       lines.push(`- [${item.kind}] ${item.absolutePath}${suffix}`);
     }
-    lines.push(`必须先读取这些文件，确认内容后再回复${userName}。不要跳过读取步骤。`);
-    lines.push(`如果本地缺少对应读取工具，就直接告诉${userName}缺了什么工具、因此暂时无法读取，不要假装已经读过。`);
+    lines.push(`You must read these files before replying to ${userName}. Do not skip the read step.`);
+    lines.push(`If the required local tool is missing, tell ${userName} exactly what is missing and that you cannot read the file yet. Do not pretend you already read it.`);
   }
 
   if (failed.length) {
     if (lines.length) {
       lines.push("");
     }
-    lines.push("图片/附件接收异常：");
+    lines.push("Attachment intake errors:");
     for (const item of failed) {
-      const label = item.sourceFileName || item.kind || "附件";
+      const label = item.sourceFileName || item.kind || "attachment";
       lines.push(`- ${label}: ${item.reason}`);
     }
   }

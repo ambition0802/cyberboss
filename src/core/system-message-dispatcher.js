@@ -44,9 +44,9 @@ function buildSystemInboundText(text, config = {}) {
   const body = normalizeText(text);
   const userName = normalizeText(config?.userName) || "用户";
   if (!body) {
-    return `内部触发。\n此条信息对${userName}不可见。`;
+    return `System trigger.\nThis message is not visible to ${userName}.`;
   }
-  return `内部触发。\n此条信息对${userName}不可见。\n${body}`;
+  return `System trigger.\nThis message is not visible to ${userName}.\n${body}`;
 }
 
 function normalizeIsoTime(value) {
