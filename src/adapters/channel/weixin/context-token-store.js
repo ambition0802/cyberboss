@@ -80,5 +80,5 @@ module.exports = {
   loadPersistedContextTokens,
   persistContextToken,
   resolveContextTokenPath,
+  savePersistedContextTokens,
 };
-

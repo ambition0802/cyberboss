@@ -72,6 +72,32 @@ class TimelineScreenshotQueueStore {
     const normalizedAccountId = normalizeText(accountId);
     return this.state.jobs.some((job) => job.accountId === normalizedAccountId);
   }
+
+  migrateAccountId(fromAccountId, toAccountId) {
+    this.load();
+    const normalizedFromAccountId = normalizeText(fromAccountId);
+    const normalizedToAccountId = normalizeText(toAccountId);
+    if (!normalizedFromAccountId || !normalizedToAccountId || normalizedFromAccountId === normalizedToAccountId) {
+      return 0;
+    }
+
+    let migratedJobs = 0;
+    this.state.jobs = this.state.jobs.map((job) => {
+      if (job.accountId !== normalizedFromAccountId) {
+        return job;
+      }
+      migratedJobs += 1;
+      return {
+        ...job,
+        accountId: normalizedToAccountId,
+      };
+    });
+
+    if (migratedJobs > 0) {
+      this.save();
+    }
+    return migratedJobs;
+  }
 }
 
 function normalizeTimelineScreenshotJob(job) {

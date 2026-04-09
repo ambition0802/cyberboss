@@ -71,6 +71,32 @@ class ReminderQueueStore {
     const first = this.state.reminders[0];
     return Number.isFinite(first?.dueAtMs) ? first.dueAtMs : 0;
   }
+
+  migrateAccountId(fromAccountId, toAccountId) {
+    this.load();
+    const normalizedFromAccountId = typeof fromAccountId === "string" ? fromAccountId.trim() : "";
+    const normalizedToAccountId = typeof toAccountId === "string" ? toAccountId.trim() : "";
+    if (!normalizedFromAccountId || !normalizedToAccountId || normalizedFromAccountId === normalizedToAccountId) {
+      return 0;
+    }
+
+    let migratedReminders = 0;
+    this.state.reminders = this.state.reminders.map((reminder) => {
+      if (reminder.accountId !== normalizedFromAccountId) {
+        return reminder;
+      }
+      migratedReminders += 1;
+      return {
+        ...reminder,
+        accountId: normalizedToAccountId,
+      };
+    });
+
+    if (migratedReminders > 0) {
+      this.save();
+    }
+    return migratedReminders;
+  }
 }
 
 function normalizeReminder(reminder) {

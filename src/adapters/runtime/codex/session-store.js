@@ -172,6 +172,45 @@ class SessionStore {
     return null;
   }
 
+  migrateAccountId(fromAccountId, toAccountId) {
+    const normalizedFromAccountId = normalizeValue(fromAccountId);
+    const normalizedToAccountId = normalizeValue(toAccountId);
+    if (!normalizedFromAccountId || !normalizedToAccountId || normalizedFromAccountId === normalizedToAccountId) {
+      return 0;
+    }
+
+    let migratedBindings = 0;
+    const nextBindings = {};
+    for (const [bindingKey, binding] of Object.entries(this.state.bindings || {})) {
+      const currentBinding = binding && typeof binding === "object" ? binding : {};
+      const currentAccountId = normalizeValue(currentBinding.accountId);
+      const shouldMigrate = currentAccountId === normalizedFromAccountId;
+      const nextBinding = shouldMigrate
+        ? {
+          ...currentBinding,
+          accountId: normalizedToAccountId,
+        }
+        : currentBinding;
+      const nextBindingKey = shouldMigrate
+        ? this.buildBindingKey({
+          workspaceId: nextBinding.workspaceId,
+          accountId: normalizedToAccountId,
+          senderId: nextBinding.senderId,
+        })
+        : bindingKey;
+      nextBindings[nextBindingKey] = mergeBindings(nextBinding, nextBindings[nextBindingKey]);
+      if (shouldMigrate) {
+        migratedBindings += 1;
+      }
+    }
+
+    if (migratedBindings > 0) {
+      this.state.bindings = nextBindings;
+      this.save();
+    }
+    return migratedBindings;
+  }
+
   getApprovalCommandAllowlistForWorkspace(workspaceRoot) {
     const normalizedWorkspaceRoot = normalizeValue(workspaceRoot);
     if (!normalizedWorkspaceRoot) {
@@ -310,6 +349,28 @@ function getCodexParamsMap(binding) {
   return binding?.codexParamsByWorkspaceRoot && typeof binding.codexParamsByWorkspaceRoot === "object"
     ? binding.codexParamsByWorkspaceRoot
     : {};
+}
+
+function mergeBindings(incoming, existing) {
+  if (!existing) {
+    return incoming;
+  }
+  return {
+    ...incoming,
+    ...existing,
+    workspaceId: normalizeValue(existing.workspaceId) || normalizeValue(incoming.workspaceId),
+    accountId: normalizeValue(existing.accountId) || normalizeValue(incoming.accountId),
+    senderId: normalizeValue(existing.senderId) || normalizeValue(incoming.senderId),
+    activeWorkspaceRoot: normalizeValue(existing.activeWorkspaceRoot) || normalizeValue(incoming.activeWorkspaceRoot),
+    threadIdByWorkspaceRoot: {
+      ...getThreadMap(incoming),
+      ...getThreadMap(existing),
+    },
+    codexParamsByWorkspaceRoot: {
+      ...getCodexParamsMap(incoming),
+      ...getCodexParamsMap(existing),
+    },
+  };
 }
 
 function normalizeCommandTokens(tokens) {

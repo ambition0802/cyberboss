@@ -72,6 +72,32 @@ class SystemMessageQueueStore {
     const normalizedAccountId = normalizeText(accountId);
     return this.state.messages.some((message) => message.accountId === normalizedAccountId);
   }
+
+  migrateAccountId(fromAccountId, toAccountId) {
+    this.load();
+    const normalizedFromAccountId = normalizeText(fromAccountId);
+    const normalizedToAccountId = normalizeText(toAccountId);
+    if (!normalizedFromAccountId || !normalizedToAccountId || normalizedFromAccountId === normalizedToAccountId) {
+      return 0;
+    }
+
+    let migratedMessages = 0;
+    this.state.messages = this.state.messages.map((message) => {
+      if (message.accountId !== normalizedFromAccountId) {
+        return message;
+      }
+      migratedMessages += 1;
+      return {
+        ...message,
+        accountId: normalizedToAccountId,
+      };
+    });
+
+    if (migratedMessages > 0) {
+      this.save();
+    }
+    return migratedMessages;
+  }
 }
 
 function normalizeSystemMessage(message) {

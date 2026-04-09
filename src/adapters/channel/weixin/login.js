@@ -5,6 +5,8 @@ const {
   saveWeixinAccount,
 } = require("./account-store");
 const { clearPersistedContextTokens } = require("./context-token-store");
+const { migrateWeixinAccountState } = require("./account-state-migration");
+const { clearSyncBuffer } = require("./sync-buffer-store");
 const { redactSensitiveText } = require("./redact");
 
 const ACTIVE_LOGIN_TTL_MS = 5 * 60_000;
@@ -73,9 +75,25 @@ function cleanupStaleAccountsForUserId(config, activeAccount) {
     && typeof account.userId === "string"
     && account.userId.trim() === activeUserId
   ));
+  const migration = migrateWeixinAccountState(config, {
+    fromAccountIds: staleAccounts.map((account) => account.accountId),
+    toAccountId: activeAccount.accountId,
+  });
+  if (migration.migratedAccountIds.length) {
+    console.log(
+      `[cyberboss] migrated stale account state to ${activeAccount.accountId}: `
+      + `bindings=${migration.sessionBindings}, `
+      + `systemMessages=${migration.systemMessages}, `
+      + `timelineJobs=${migration.timelineScreenshotJobs}, `
+      + `reminders=${migration.reminders}, `
+      + `contextTokens=${migration.contextTokens}, `
+      + `syncBuffer=${migration.syncBuffer}`
+    );
+  }
   for (const staleAccount of staleAccounts) {
     deleteWeixinAccount(config, staleAccount.accountId);
     clearPersistedContextTokens(config, staleAccount.accountId);
+    clearSyncBuffer(config, staleAccount.accountId);
     console.log(`[cyberboss] removed stale account ${staleAccount.accountId} for userId ${activeUserId}`);
   }
   return staleAccounts;
@@ -157,6 +175,7 @@ async function runLoginFlow(config) {
   console.log(`accountId: ${account.accountId}`);
   console.log(`userId: ${account.userId || "(unknown)"}`);
   console.log(`baseUrl: ${account.baseUrl}`);
+  console.log("[cyberboss] 如果 shared bridge 已经在运行，重启 `npm run shared:start` 让新登录态生效。");
 }
 
 module.exports = { runLoginFlow };
