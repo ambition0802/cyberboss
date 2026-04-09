@@ -25,8 +25,8 @@ async function runSystemCheckinPoller(config) {
 
   while (true) {
     const delayMs = pickRandomDelayMs(minIntervalMs, maxIntervalMs);
-    const wakeAt = new Date(Date.now() + delayMs).toISOString();
-    console.log(`[cyberboss] next checkin in ${Math.round(delayMs / 60000)}m at ${wakeAt}`);
+    const wakeAt = new Date(Date.now() + delayMs);
+    console.log(`[cyberboss] next checkin in ${Math.round(delayMs / 60000)}m at ${formatLocalTime(wakeAt)}`);
     await sleep(delayMs);
 
     if (queue.hasPendingForAccount(account.accountId)) {
@@ -85,6 +85,22 @@ function pickRandomDelayMs(minIntervalMs, maxIntervalMs) {
 
 function normalizeText(value) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function formatLocalTime(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+  const milliseconds = String(date.getMilliseconds()).padStart(3, "0");
+  const offsetMinutes = -date.getTimezoneOffset();
+  const offsetSign = offsetMinutes >= 0 ? "+" : "-";
+  const absoluteOffsetMinutes = Math.abs(offsetMinutes);
+  const offsetHours = String(Math.floor(absoluteOffsetMinutes / 60)).padStart(2, "0");
+  const offsetRemainderMinutes = String(absoluteOffsetMinutes % 60).padStart(2, "0");
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}.${milliseconds} ${offsetSign}${offsetHours}:${offsetRemainderMinutes}`;
 }
 
 function sleep(ms) {
