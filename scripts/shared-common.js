@@ -3,8 +3,10 @@ const http = require("http");
 const os = require("os");
 const path = require("path");
 const { spawn } = require("child_process");
+const dotenv = require("dotenv");
 
 const rootDir = path.resolve(__dirname, "..");
+loadEnv();
 const port = String(process.env.CYBERBOSS_SHARED_PORT || "8765");
 const listenUrl = `ws://127.0.0.1:${port}`;
 const stateDir = process.env.CYBERBOSS_STATE_DIR || path.join(os.homedir(), ".cyberboss");
@@ -14,6 +16,21 @@ const bridgePidFile = path.join(logDir, "shared-wechat.pid");
 const appServerLogFile = path.join(logDir, "shared-app-server.log");
 const accountsDir = path.join(stateDir, "accounts");
 const sessionFile = process.env.CYBERBOSS_SESSIONS_FILE || path.join(stateDir, "sessions.json");
+
+function loadEnv() {
+  const candidates = [
+    path.join(rootDir, ".env"),
+    path.join(os.homedir(), ".cyberboss", ".env"),
+  ];
+  for (const envPath of candidates) {
+    if (!fs.existsSync(envPath)) {
+      continue;
+    }
+    dotenv.config({ path: envPath });
+    return;
+  }
+  dotenv.config();
+}
 
 function ensureLogDir() {
   fs.mkdirSync(logDir, { recursive: true });
